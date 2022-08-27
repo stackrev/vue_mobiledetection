@@ -18,12 +18,20 @@
       </ul>
     </p>
     <div v-if="!isMobile">desktop</div>
-    <div v-else>mobile</div>
+    <div v-else>
+      <p>mobile data:
+        <ul>
+          <li>DeviceInfo: {{deviceInfo}}</li>
+          <li>BatteryInfo: {{batteryInfo}}</li>
+        </ul>
+      </p>
+    </div>
   </div>
 </template>
 
 <script>
 import UAParser from 'ua-parser-js';
+import { Device } from '@capacitor/device';
 
 /**
  * This app provides information of the browser's host.
@@ -36,6 +44,8 @@ export default {
       vendor: "",
       opera: "",
       uaParsed: null,
+      deviceInfo: "",
+      batteryInfo: "",
     };
   },
 
@@ -56,6 +66,7 @@ export default {
 
     /**
      * Loads all data with the browser and it's host.
+     * @see https://www.npmjs.com/package/ua-parser-js
      */
     loadBrowserHostData() {
       // 1. Simplest way to ID a mobile device.
@@ -68,8 +79,27 @@ export default {
       this.opera = navigator?.opera || "NA";
       if (navigator?.userAgent != null) {
         this.uaParsed = new UAParser(navigator.userAgent);
+        if (this.isMobile) {
+          this.loadDeviceData()
+        }
       }
     },
+
+    /**
+     * If this is a mobile, access device info.
+     * @see https://capacitorjs.com/docs/apis/device#deviceinfo
+     * 
+     */
+    loadDeviceData() {
+      async () => {
+          const info = await Device.getInfo();
+          this.deviceInfo = info;
+        };
+      async () => {
+          const info = await Device.getBatteryInfo();
+          this.batteryInfo= info;
+        };
+    }
   },
 };
 
