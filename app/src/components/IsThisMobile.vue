@@ -32,6 +32,9 @@
 <script>
 import UAParser from 'ua-parser-js';
 import { Device } from '@capacitor/device';
+import { getAnalytics, logEvent } from "firebase/analytics";
+
+import database from "../database";
 
 /**
  * This app provides information of the browser's host.
@@ -54,7 +57,7 @@ export default {
       // { model: '', type: '', vendor: '' }
       let device = this.uaParsed?.getDevice();
       // possible devices: console, mobile, tablet, smarttv, wearable, embedded
-      return device !== null ? (device?.model === "mobile") : (window.innerWidth < 600);
+      return device != null ? (device?.type === "mobile") : (window.innerWidth < 600);
     }
   },
   
@@ -83,6 +86,9 @@ export default {
           this.loadDeviceData()
         }
       }
+
+      const analytics = getAnalytics();
+      logEvent(analytics, 'initial_load', this.userAgent);
     },
 
     /**
@@ -91,14 +97,27 @@ export default {
      * 
      */
     loadDeviceData() {
-      async () => {
-          const info = await Device.getInfo();
-          this.deviceInfo = info;
-        };
-      async () => {
-          const info = await Device.getBatteryInfo();
-          this.batteryInfo= info;
-        };
+      console.log("loadDeviceData")
+      const analytics = getAnalytics();
+
+      const getInfo = async () => {
+        const info = await Device.getInfo();
+        this.deviceInfo = info;
+      
+        logEvent(analytics, 'device_load', this.deviceInfo);
+
+        // safe to Db.
+        database.saveMobile(this.deviceInfo);
+      };
+
+      const getBatteryInfo = async () => {
+        const info = await Device.getBatteryInfo();
+        this.batteryInfo = info;
+
+        logEvent(analytics, 'devicebattery_load',this.batteryInfo);
+      };
+      getInfo();
+      getBatteryInfo();
     }
   },
 };
