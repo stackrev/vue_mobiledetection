@@ -3,6 +3,9 @@
 ![Image: Capacitors](capcitors.PNG "Capacitors")
 
 <!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
+
+<!-- code_chunk_output -->
+
 - [Vue and Capacitor - Porting to Mobile Apps made Easy.](#vue-and-capacitor---porting-to-mobile-apps-made-easy)
   - [Build your Web App](#build-your-web-app)
 - [Add some Capacitors](#add-some-capacitors)
@@ -12,6 +15,24 @@
 - [Run your App](#run-your-app)
   - [Leverage Capacitor APIs](#leverage-capacitor-apis)
 - [Firebase for More Power](#firebase-for-more-power)
+  - [Authenticate with Google](#authenticate-with-google)
+  - [Add the Firebase SDK](#add-the-firebase-sdk)
+  - [Fun with databases](#fun-with-databases)
+- [Conclusion](#conclusion)
+  - [References](#references)
+  - [Github](#github)
+
+<!-- /code_chunk_output -->
+- [Vue and Capacitor - Porting to Mobile Apps made Easy.](#vue-and-capacitor---porting-to-mobile-apps-made-easy)
+  - [Build your Web App](#build-your-web-app)
+- [Add some Capacitors](#add-some-capacitors)
+  - [Device Specifics](#device-specifics)
+    - [SDKs and Licences](#sdks-and-licences)
+    - [Device Developer Mode](#device-developer-mode)
+- [Run your App](#run-your-app)
+  - [Leverage Capacitor APIs](#leverage-capacitor-apis)
+- [Firebase for More Power](#firebase-for-more-power)
+  - [Authenticate with Google](#authenticate-with-google)
   - [Add the Firebase SDK](#add-the-firebase-sdk)
   - [Fun with databases](#fun-with-databases)
 - [Conclusion](#conclusion)
@@ -181,6 +202,38 @@ You will see information about your hardware, in this case this is what samsung 
 Firebase is Google's app development framework, and provides services for when you release your apps to the world. These services include serverless functions, noSQL databases, hosting, analytics and other goodies that you would use to connect your users.
 
 For our simple mobile detector app, we will use their noSQL database to save state and leverage analytics to help us understand who uses this app. 
+
+## Authenticate with Google
+
+Rule of thumb, authenticate all who will use your cloud services. In this case, using the ready made google authentation flow to identify our users.
+
+Authentication is either native or web, though we have plugins to bridge the gap, one is @capacitor-firebase/authentication:
+
+```bash
+npm install @capacitor-firebase/authentication
+npx cap sync
+```
+
+In capacitor.config.json add the plugin config:
+```json
+"plugins": {
+  "FirebaseAuthentication": {
+    "skipNativeAuth": false,
+    "providers": [ "google.com"]
+  }
+}
+```
+
+The first time the page loads, we will ask the user to login:
+
+```jsx
+const signInWithGoogle = async () => {
+  const result = await FirebaseAuthentication.signInWithGoogle();
+  return result.user;
+};
+
+
+```
 
 ## Add the Firebase SDK
 

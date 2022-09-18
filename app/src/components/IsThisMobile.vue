@@ -3,6 +3,7 @@
     <p>
       We will identify if it's a mobile by parsing the user agent string defined as a standards in HTTP <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.5.3">here</a> in RFC7231.
     </p>
+    <div v-if="userToken !== null"><p><b>This is your firebase token:</b> <i>{{JSON.stringify(userToken)}}</i></p></div>
     <p><b>User Agent string:</b> <i>{{userAgent}}</i></p>
     <p>Browser metadata: 
       <ul>
@@ -35,6 +36,7 @@ import { Device } from '@capacitor/device';
 import { getAnalytics, logEvent } from "firebase/analytics";
 
 import database from "../database";
+import firebaseAuth from "../firebaseAuth";
 
 /**
  * This app provides information of the browser's host.
@@ -49,6 +51,7 @@ export default {
       uaParsed: null,
       deviceInfo: "",
       batteryInfo: "",
+      userToken: null,
     };
   },
 
@@ -62,6 +65,14 @@ export default {
   },
   
   mounted() {
+    if (this.userToken === null) {
+      firebaseAuth.signInWithGoogle().then(result => console.log(`Result: ${result}`));
+      //if (result) {
+        
+        //this.userToken = firebaseAuth.getIdToken();
+      //}
+    }
+
     this.loadBrowserHostData();
   },
 

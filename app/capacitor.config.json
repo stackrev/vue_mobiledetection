@@ -1,1 +1,14 @@
-{"appId":"org.adamd","appName":"MobileDetector","webDir":"C:\\Users\\bigworker\\workspace\\vue_mobiledetection\\app\\dist\\bundled","bundledWebRuntime":false}
+{
+    "appId": "org.adamd",
+    "appName": "MobileDetector",
+    "webDir": "C:\\Users\\bigworker\\workspace\\vue_mobiledetection\\app\\dist\\bundled",
+    "bundledWebRuntime": false,
+    "plugins": {
+        "FirebaseAuthentication": {
+            "skipNativeAuth": false,
+            "providers": [
+                "google.com"
+            ]
+        }
+    }
+}
