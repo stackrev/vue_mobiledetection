@@ -9,16 +9,16 @@
 - [Vue and Capacitor - Porting to Mobile Apps made Easy.](#vue-and-capacitor---porting-to-mobile-apps-made-easy)
   - [Build your Web App](#build-your-web-app)
     - [New UA Challenger Update!](#new-ua-challenger-update)
-- [Add some Capacitors](#add-some-capacitors)
-  - [Device Specifics](#device-specifics)
+- [Fire up the Capacitors](#fire-up-the-capacitors)
+  - [Setup for Device Specifics](#setup-for-device-specifics)
     - [SDKs and Licences](#sdks-and-licences)
     - [Device Developer Mode](#device-developer-mode)
 - [Run your App](#run-your-app)
   - [Leverage Capacitor APIs](#leverage-capacitor-apis)
-- [Firebase for More Power](#firebase-for-more-power)
+- [Firebase it - More Power](#firebase-it---more-power)
   - [Add the Firebase SDK](#add-the-firebase-sdk)
   - [Authenticate with Google](#authenticate-with-google)
-  - [Fun with databases](#fun-with-databases)
+  - [Databases for your Data Needs](#databases-for-your-data-needs)
 - [Conclusion](#conclusion)
   - [References](#references)
   - [Github](#github)
@@ -27,24 +27,24 @@
 - [Vue and Capacitor - Porting to Mobile Apps made Easy.](#vue-and-capacitor---porting-to-mobile-apps-made-easy)
   - [Build your Web App](#build-your-web-app)
     - [New UA Challenger Update!](#new-ua-challenger-update)
-- [Add some Capacitors](#add-some-capacitors)
-  - [Device Specifics](#device-specifics)
+- [Fire up the Capacitors](#fire-up-the-capacitors)
+  - [Setup for Device Specifics](#setup-for-device-specifics)
     - [SDKs and Licences](#sdks-and-licences)
     - [Device Developer Mode](#device-developer-mode)
 - [Run your App](#run-your-app)
   - [Leverage Capacitor APIs](#leverage-capacitor-apis)
-- [Firebase for More Power](#firebase-for-more-power)
+- [Firebase it - More Power](#firebase-it---more-power)
   - [Add the Firebase SDK](#add-the-firebase-sdk)
   - [Authenticate with Google](#authenticate-with-google)
-  - [Fun with databases](#fun-with-databases)
+  - [Databases for your Data Needs](#databases-for-your-data-needs)
 - [Conclusion](#conclusion)
   - [References](#references)
   - [Github](#github)
 
 
-Capacitor - a cross-platform that operates on native runtime to build apps that can run natively on iOS and Android, AKA Web Native apps.
+Capacitor - a cross-platform app framework that operates on native runtime to build apps that can run natively on iOS and Android, these are also known as **Web Native Apps**.
 
-Why use this modern native container approach? It's for you, who want to build web-first without sacrificing access to native device SDKs.
+Why use this modern native container approach? Because we want to build web-first without sacrificing access to native device SDKs, free from the complexity and nuances of various devices.
 
 ## Build your Web App
 
@@ -54,23 +54,22 @@ We start by spinning a simple Vue application using vue cli, and choose the defa
 
 In the components folder, we add a new component that will detect if we are running in a mobile device or not:
 
-```javascript
+```jsx
+/**
+ * This app provides information of the browser's host.
+ */
 export default {
   name: "IsThisMobile",
   data() {
     return {
       userAgent: "",
       vendor: "",
-      opera: "",
       uaParsed: null,
+      deviceInfo: "",
+      batteryInfo: "",
+      userToken: null,
+      isMobile: false,
     };
-  },
-
-  computed: {
-    isMobile(){
-      let device = this.uaParsed?.getDevice();
-      return device !== null ? (device?.model === "mobile") : (window.innerWidth < 600);
-    }
   },
   
   mounted() {
@@ -78,27 +77,69 @@ export default {
   },
 
   methods: {
+
     /**
      * Loads all data with the browser and it's host.
+     * @see https://www.npmjs.com/package/ua-parser-js
      */
     loadBrowserHostData() {
-      this.userAgent= navigator?.userAgent || "NA";
-      this.vendor= navigator?.vendor || "NA";
-      this.opera = navigator?.opera || "NA";
-      if (navigator?.userAgent != null) {
+      // 1. Simplest way to ID a mobile device.
+      // window.innerWidth < 600;
+      // 2. The more sophisticated way is through the user agent (UA) string
+      // This string is in the form: User-Agent = product *( RWS ( product / comment ) )
+      // 3. https://www.npmjs.com/package/ua-parser-js will structure this info.
+      // 4. Be forward-compatible, userAgentData is preferred over the UA string.
+      this.userAgent = navigator?.userAgent ?? "NA";
+      this.vendor = navigator?.vendor ?? "NA";
+      if (this.userAgent) {
         this.uaParsed = new UAParser(navigator.userAgent);
+        // { model: '', type: '', vendor: '' }
+        let device = this.uaParsed?.getDevice();
+        // possible devices: console, mobile, tablet, smarttv, wearable, embedded
+        this.isMobile = device != null ? (device?.type === "mobile") : (window.innerWidth < 600);
+      }
+      if (this.isMobile) {
+        this.loadDeviceData()
       }
     },
+
+    /**
+     * If this is a mobile, access device info.
+     * @see https://capacitorjs.com/docs/apis/device#deviceinfo
+     * 
+     */
+    loadDeviceData() {
+      console.log("loadDeviceData")
+      const analytics = getAnalytics();
+
+      const getInfo = async () => {
+        const info = await Device.getInfo();
+        this.deviceInfo = info;
+      
+        logEvent(analytics, 'device_load', this.deviceInfo);
+
+        
+      };
+
+      const getBatteryInfo = async () => {
+        const info = await Device.getBatteryInfo();
+        this.batteryInfo = info;
+
+        logEvent(analytics, 'devicebattery_load',this.batteryInfo);
+      };
+      getInfo();
+      getBatteryInfo();
+    }
   },
 };
 ```
 
-Making use of a the User Agent (UA), available [here](https://www.npmjs.com/package/ua-parser-js), we can easily parse the UA string and get relevant information.
+Making use of a the User Agent (UA), available [here](https://www.npmjs.com/package/ua-parser-js), we can easily parse the UA string and get any relevant information.
 The UA string is a defined HTTP standard in [RFC7231](https://datatracker.ietf.org/doc/html/rfc7231#section-5.5.3). In general it comes with this format:
 
 `User-Agent = product *( RWS ( product / comment ) )`
 
-Start the server with **yarn serve**, and you should information about your host:
+Start our server with **yarn serve**, and you should view information about your host:
 
 ```bash
 User Agent string: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36
@@ -115,7 +156,9 @@ CPU: { "architecture": "amd64" }
 
 ### New UA Challenger Update!
 
-At the time of writing, the above is still possible on Chromium browsers, but google is planning to reduce this information due to user's being fingerprinted. Check the announcement [here](https://blog.chromium.org/2021/05/update-on-user-agent-string-reduction.html). In our case, we can be forward-compatible through accessing the **navigator.userAgentData** object:
+At the time of writing, the above is still possible on Chromium browsers, but google is planning to reduce this information due to user's being fingerprinted. Check the announcement [here](https://blog.chromium.org/2021/05/update-on-user-agent-string-reduction.html). 
+
+In our case, we can be forward-compatible through accessing the **navigator.userAgentData** object:
 
 ```jsx
 if (navigator?.userAgentData) {
@@ -129,13 +172,13 @@ else {
 }
 ```        
 
-# Add some Capacitors
+# Fire up the Capacitors
 
 Now the fun part. Adding [capacitor](https://capacitorjs.com/) to the mix will allow our simple web app to be deployed on mobiles.
 
 `vue add capacitor`
 
-You'll be asked what is this for either *IOS* or *Android*, choose whichever you target device is.
+You'll be asked what is this for either *IOS* or *Android*, choose whichever you target device is. Within this article, we will only use the android setup.
 
 Or use the more modern Capacitor CLI (you need to choose between IOS and Android):
 
@@ -159,17 +202,17 @@ yarn build
 npx cap sync
 ```
 
-Note that both these commands also do a `npx cap sync`, which syncs the web code and plugins with the native project.
+Note that both these commands also do a `npx cap sync` (the vue cli does it implicitly), which syncs the web code and plugins with the native project.
 
-## Device Specifics
+## Setup for Device Specifics
 
-Depending on what flavor of device you are running, you might run into these additional configurations:
+Depending on what flavor of device you are running, you might run into these additional configurations.
 
 ### SDKs and Licences
 
- You would need to accept and download specific tools, SDKs and licences for both Xcode or Android Studio. Follow the relevant instructions.
+ You would need to accept and download specific tools, SDKs and licences for both Xcode or Android Studio. Follow their relevant instructions.
 
-For android, we opened our Android studio and went to tools->SDK Manager. From there we installed the APIs required and the android SDK we will build against:
+For android, we opened our Android studio and went to tools->SDK Manager. There we installed the APIs required and the android SDK we will build against:
 
 ![Image: Android Studio SDK](androidStudioSDK.PNG "Android Studio SDK")
 
@@ -177,7 +220,7 @@ For android, we opened our Android studio and went to tools->SDK Manager. From t
 
 To run on your device, you will need to enable developer options and USB wire debugging. 
 
-This is different for everymodel, the model used here - a galaxy 10 - required we tap 7 times on its build number before developer options was available.
+This is different for every model, the one used here - a galaxy 10 - required us to tap 7 times on its build number before developer options were enabled in the device setting.
 
 ![Image: Samsung Developer Options](devOptionsSamsung.jpg "Samsung Developer Options")
 
@@ -191,7 +234,7 @@ If the at any point the installation fails, you need to uninstall the previous a
 
 ## Leverage Capacitor APIs
 
-Having metadata on the host's browser is good, but we want to truly feel like we are using the device. 
+Having metadata on the host's browser is good, but we want to directly access the device. 
 Let's use the APIs exposed by capacitor to know about the hardware hosting the browser.
 
 First we install the capacitor device library and sync with the device bundle we created.
@@ -211,25 +254,24 @@ All major versions should be the same (Vue cli could have installed older versio
 "@capacitor/device": "^4.0.1",
 ```
 
-You will see information about your hardware, in this case this is what samsung shows:
+With that done, we can see information about our hardware, in this case this is what samsung shows:
 
 ![Image: Samsung App with Device API](appFromSamsungWithAPI.jpg "Samsung App with Device API")
 
-# Firebase for More Power
+# Firebase it - More Power
 
-Firebase is Google's app development framework, and provides services for when you release your apps to the world. These services include serverless functions, noSQL databases, hosting, analytics and other goodies that you would use to connect your users.
+Firebase is Google's app development framework, and provides usefule services for all your apps released to the world. These services include serverless functions, noSQL databases, hosting, analytics and other goodies that you would use to connect your users.
 
-For our simple mobile detector app, we will use their noSQL database to save state and leverage analytics to help us understand who uses this app. 
-
+For our simple mobile detector app, we will authenticate the user and use the noSQL database to save any details we read from the device. 
 
 
 ## Add the Firebase SDK
 
-Add firebase to our webapp, there is a mobile version of the SDK but we can do with the web version:
+Add firebase to our webapp, note that there is a mobile version of the SDK - but we won't use this, because capacitor is web app first:
 
 `yarn add firebase`
 
-We add the firebase configs generated to a serperate file:
+Go to the firebase site and create a new project. Generate the projects configs and copy them to a seperate plugins file in our web app project:
 
 ```javascript
 import { initializeApp, getApp, getApps } from "firebase/app";
@@ -264,7 +306,7 @@ const firebase = new Firebase();
 export default firebase;
 ```
 
-and initialize it from our main:
+and initialize it from our **main.vue**:
 
 ```javascript
 import firebase from "./firebase";
@@ -273,16 +315,16 @@ firebase.initialize();
 ```
 ## Authenticate with Google
 
-Rule of thumb, authenticate all who will use your cloud services. In this case, using the ready made google authentation flow to identify our users.
+A good rule of thumb to prevent abuse of your resources is to authenticate all who will use your cloud services. In this case, using the ready made google authentation flow to identify our users.
 
-Authentication is either native or web, though we have plugins to bridge the gap, one is @capacitor-firebase/authentication:
+Authentication is either native or web, with capacitor we have a web plugin that will bridge the gap, this being @capacitor-firebase/authentication:
 
 ```bash
 npm install @capacitor-firebase/authentication
 npx cap sync
 ```
 
-In capacitor.config.json add the plugin config:
+In **capacitor.config.json** add the plugin config:
 ```json
 "plugins": {
   "FirebaseAuthentication": {
@@ -292,7 +334,7 @@ In capacitor.config.json add the plugin config:
 }
 ```
 
-The first time the page loads, we will ask the user to login:
+The first time the page loads, we will ask the user to login using the mount hook from vuejs:
 
 ```jsx
 const signInWithGoogle = async () => {
@@ -302,7 +344,7 @@ const signInWithGoogle = async () => {
 ```
 
 This is enough for a webapp, but we want the same functionality to be available on our device. 
-Run the *yarn capacitor:build* command and go to the android folder and find the file **variables.gradle**, within this file add the following setting:
+Run the *yarn capacitor:build* command and go to the android folder and find the file **variables.gradle**. Within this file add the following setting:
 
 ```gradle
 ext {
@@ -310,9 +352,9 @@ ext {
     rgcfaIncludeGoogle = true
 }
 ```
-And sync your device prjeect again with *npx cap sync*.
+Sync your device project again with *npx cap sync*.
 
-To connect to firebase and the authentication service, we need a signin certificate, create it with your keytool and check its content:
+To connect to firebase and the authentication service, we need a sign-in certificate, create it with your keytool and check its content:
 
 ```bash
 keytool -genkey -v -keystore $HOME\\.android\\debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000
@@ -355,13 +397,13 @@ Run *npx cap run android* or use your android IDE, and you should see this on yo
 
 ![Image: Firebase Auth](deviceAuthentication.jpg "Firebase Auth")
 
-## Fun with databases
+## Databases for your Data Needs
 
 Now that we can identify the user, we can save data for them - or us. Let's add the firebase database service to our mobile app.
 
 `yarn add firebase/database`
 
-We will access the database with the following apis"
+We will access the database with the following apis:
 
 ```javascript
 import {
@@ -422,11 +464,11 @@ export default databaseService;
 
 ```
 
-We call *saveMobile* to store the metadata of the device indexed by model. Browse to your firebase account and have a look at the realtime database, you ought to see some data:
+We call *saveMobile* to store the metadata of the device indexed by the **user id**. Browse to your firebase account and have a look at the realtime database, you ought to see some data:
 
 ![Image: Firebase DB](dbFirebase.PNG "Firebase DB")
 
-But, just leaving the database with defaults is risky business - as all who can call that database can access everyone's data. This is because currently the database rules are set as follows:
+But, leaving the database with defaults settings is risky - as all who can call that database can access everyone's data. This is because currently the database rules are set as follows:
 ```json
 {
   "rules": {
@@ -435,8 +477,9 @@ But, just leaving the database with defaults is risky business - as all who can 
   }
 }
 ```
+This means all reads and writes on all paths and documents are allowed.
 
-Let's set it that only loggedin users can accecss their own data. Firebase comes with an environment variable called *$uid *which we can use in setting the access to a users data in the database with the following configuration:
+Let's secure it to only logged in users. Firebase comes with an environment variable called *$uid* which we can use in these settings, to limit users to only their own data:
 
 ```json
 {
@@ -451,20 +494,24 @@ Let's set it that only loggedin users can accecss their own data. Firebase comes
 }
 ```
 *"auth != null"* tells our database that only logged in users can do actions to the database, while *"$uid === auth.uid"* hints that a user can only affect a path under their user id number.
+
 In the same tab where you set these access rules, you have a sandbox to test these access rights:
 
-![Image: Firebase DB with access](dbFirebase.PNG "Firebase DB with access")
+![Image: Firebase DB with access](dbWithAuth.PNG "Firebase DB with access")
 
-With all this, if we run our capacitor again and login from the mobile device, our database should be populated as follows:
+With all this set, if we run our capacitor again and login from the mobile device, our database should be populated as follows:
+
 ![Image: Firebase DB with All](dbWithMobile.PNG "Firebase DB with All")
 
 # Conclusion
 
-In this article, we discovered the portable magic of using capacitor with your App to provide an app on both browser and mobile device.
-We understood how to detect what is running the browser and how to access its data.
-Finally we got acquinted with firebase, the best platfrom for all device and web apps out there. No more complexities or nuances for every device, with today's technology, making a mobile and web app is no brainer.
+In this article, we discovered the portable magic of using capacitor with your work to provide an App on both browsers and mobile devices.
 
-Enjoy your rise on those app stores!
+We understood how to detect what is running the browser and how to access its specs.
+
+Finally we got acquinted with firebase, the best platfrom for all device and web apps out there. With such technology, there are no more complexities or nuances for every device - making a mobile and web app is no brainer.
+
+Enjoy your rise up those app stores' rankings!
 
 ## References
 
@@ -478,7 +525,7 @@ Enjoy your rise on those app stores!
 
 ## Github
 
-Article here is also available on [Github](https://github.com/adamd1985/vue_mobiledetection)
+Article and code available on [Github](https://github.com/adamd1985/vue_mobiledetection)
 
 #
 <div align="right">
