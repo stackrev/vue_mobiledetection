@@ -57,8 +57,12 @@ export default {
   mounted() {
     if (this.userToken === null) {
       firebaseAuth.signInWithGoogle().then((result) => {
-        console.log(`Result: ${result}`);
-        firebaseAuth.getCurrentUser().then(token => this.userToken = token);
+        console.log(`Result with Signin: ${result}`);
+        firebaseAuth.getCurrentUser().then(user => {
+          console.log(`User loaded: ${user}`);
+          this.userToken = user;
+          this.saveData();
+        });
       });
     }
 
@@ -92,14 +96,23 @@ export default {
           let device = this.uaParsed?.getDevice();
           // possible devices: console, mobile, tablet, smarttv, wearable, embedded
           this.isMobile = device != null ? (device?.type === "mobile") : (window.innerWidth < 600);
-          if (this.isMobile) {
-            this.loadDeviceData()
-          }
+          
         }
       }
-
+      if (this.isMobile) {
+        this.loadDeviceData()
+      }
       // const analytics = getAnalytics();
       // logEvent(analytics, 'initial_load', this.userAgent);
+    },
+
+    saveData() {
+      // safe to Db.
+      if (this.userAgent){
+        database.saveBrowser(this.userToken.uid, this.userAgent);
+      }
+      if (this.deviceInfo){
+      database.saveMobile(this.userToken.uid, this.deviceInfo);}
     },
 
     /**
@@ -117,8 +130,7 @@ export default {
       
         logEvent(analytics, 'device_load', this.deviceInfo);
 
-        // safe to Db.
-        database.saveMobile(this.deviceInfo);
+        
       };
 
       const getBatteryInfo = async () => {

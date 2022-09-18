@@ -16,8 +16,8 @@
 - [Run your App](#run-your-app)
   - [Leverage Capacitor APIs](#leverage-capacitor-apis)
 - [Firebase for More Power](#firebase-for-more-power)
-  - [Authenticate with Google](#authenticate-with-google)
   - [Add the Firebase SDK](#add-the-firebase-sdk)
+  - [Authenticate with Google](#authenticate-with-google)
   - [Fun with databases](#fun-with-databases)
 - [Conclusion](#conclusion)
   - [References](#references)
@@ -34,8 +34,8 @@
 - [Run your App](#run-your-app)
   - [Leverage Capacitor APIs](#leverage-capacitor-apis)
 - [Firebase for More Power](#firebase-for-more-power)
-  - [Authenticate with Google](#authenticate-with-google)
   - [Add the Firebase SDK](#add-the-firebase-sdk)
+  - [Authenticate with Google](#authenticate-with-google)
   - [Fun with databases](#fun-with-databases)
 - [Conclusion](#conclusion)
   - [References](#references)
@@ -148,9 +148,9 @@ npx cap init
 npx cap add android | ios
 ```
 
-Build your webapp and then sync it to capacitor:
+Build your webapp, then sync it to capacitor and have it run in your favorite android IDE:
 
-`yarn capacitor:build --android|ios` 
+`yarn capacitor:build --android && npx cap run android` 
 
 Or using the capacitor cli:
 
@@ -221,37 +221,7 @@ Firebase is Google's app development framework, and provides services for when y
 
 For our simple mobile detector app, we will use their noSQL database to save state and leverage analytics to help us understand who uses this app. 
 
-## Authenticate with Google
 
-Rule of thumb, authenticate all who will use your cloud services. In this case, using the ready made google authentation flow to identify our users.
-
-Authentication is either native or web, though we have plugins to bridge the gap, one is @capacitor-firebase/authentication:
-
-```bash
-npm install @capacitor-firebase/authentication
-npx cap sync
-```
-
-In capacitor.config.json add the plugin config:
-```json
-"plugins": {
-  "FirebaseAuthentication": {
-    "skipNativeAuth": false,
-    "providers": [ "google.com"]
-  }
-}
-```
-
-The first time the page loads, we will ask the user to login:
-
-```jsx
-const signInWithGoogle = async () => {
-  const result = await FirebaseAuthentication.signInWithGoogle();
-  return result.user;
-};
-
-
-```
 
 ## Add the Firebase SDK
 
@@ -301,14 +271,97 @@ import firebase from "./firebase";
 
 firebase.initialize();
 ```
+## Authenticate with Google
+
+Rule of thumb, authenticate all who will use your cloud services. In this case, using the ready made google authentation flow to identify our users.
+
+Authentication is either native or web, though we have plugins to bridge the gap, one is @capacitor-firebase/authentication:
+
+```bash
+npm install @capacitor-firebase/authentication
+npx cap sync
+```
+
+In capacitor.config.json add the plugin config:
+```json
+"plugins": {
+  "FirebaseAuthentication": {
+    "skipNativeAuth": false,
+    "providers": [ "google.com"]
+  }
+}
+```
+
+The first time the page loads, we will ask the user to login:
+
+```jsx
+const signInWithGoogle = async () => {
+  const result = await FirebaseAuthentication.signInWithGoogle();
+  return result.user;
+};
+```
+
+This is enough for a webapp, but we want the same functionality to be available on our device. 
+Run the *yarn capacitor:build* command and go to the android folder and find the file **variables.gradle**, within this file add the following setting:
+
+```gradle
+ext {
+    ...
+    rgcfaIncludeGoogle = true
+}
+```
+And sync your device prjeect again with *npx cap sync*.
+
+To connect to firebase and the authentication service, we need a signin certificate, create it with your keytool and check its content:
+
+```bash
+keytool -genkey -v -keystore $HOME\\.android\\debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000
+keytool -list -v -alias androiddebugkey -keystore $HOME\\.android\\debug.keystore -keypass android
+```
+
+you should see the following output (scrambled in this article for security):
+```bash
+Alias name: androiddebugkey
+Creation date: Jan 9, 2022
+Entry type: PrivateKeyEntry
+Certificate chain length: 1
+Certificate[1]:
+Owner: C=US, O=Android, CN=Android Debug
+Issuer: C=US, O=Android, CN=Android Debug
+Serial number: 1
+Valid from: Sun Jan 09 01:15:04 CET 2022 until: Tue Jan 02 01:15:04 CET 2052
+Certificate fingerprints:
+         SHA1: XX:XX:XX:XX:F5:7C:D5:XX:XX:EB:B8:XX:4B:78:XX:XX:XX:A2:XX:XX
+         SHA256: XX:XX:XX:4A:XX:6F:XX:27:51:11:90:7A:XX:XX:XX:XX:E7:XX:XX:XX:DC:XX:E3:XX:XX:XX:64:F7:36:XX:XX:XX
+Signature algorithm name: SHA1withRSA (weak)
+Subject Public Key Algorithm: 2048-bit RSA key
+Version: 1
+
+Warning:
+The certificate uses the SHA1withRSA signature algorithm which is considered a security risk. This algorithm will be disabled in a future update.
+```
+This google-specific debug certificate should always have the following settings:
+- Keystore name: "debug.keystore"
+- Keystore password: "android"
+- Key alias: "androiddebugkey"
+- Key password: "android"
+- CN: "CN=Android Debug,O=Android,C=US"
+
+Add the fingerprints to the Firebase projects settings:
+
+![Image: Firebase Fingerprints](fingerprintOnFirebase.PNG "Firebase Fingerprints")
+
+Run *npx cap run android* or use your android IDE, and you should see this on your device:
+
+![Image: Firebase Auth](deviceAuthentication.jpg "Firebase Auth")
 
 ## Fun with databases
 
-Add the firebase database.
+Now that we can identify the user, we can save data for them - or us. Let's add the firebase database service to our mobile app.
 
 `yarn add firebase/database`
 
-We will access the database witht he following apis"
+We will access the database with the following apis"
 
 ```javascript
 import {
@@ -329,27 +382,17 @@ class DatabaseService {
     this.db = null;
   }
 
-  /**
-   * Init connection.
-   */
   initialize() {
     this.db = getDatabase();
-    /*if (location.hostname === 'localhost') {
-      this.db.useEmulator('localhost', 9000);
-    }*/
-    this.dbref = ref(this.db, "mobiles");
+    this.dbrefMobiles = ref(this.db, "mobiles");
+    this.dbrefBrowsers = ref(this.db, "browsers");
   }
 
-  /**
-   * Save a new mobile config
-   * @param {*} user
-   * @returns
-   */
-  saveMobile(mobile) {
+  saveMobile(uid, mobile) {
     return new Promise((resolve, reject) => {
       const obj = {};
-      obj[mobile.deviceInfo.model] = mobile;
-      set(this.dbref, obj)
+      obj[`${uid}`] = mobile;
+      set(this.dbrefMobiles, obj)
         .then(() => {
           resolve(obj);
         })
@@ -359,24 +402,16 @@ class DatabaseService {
     });
   }
 
-  /**
-   * Reads a mobile config.
-   *
-   * @param {*} id
-   * @returns
-   */
-  readMobile(mobile) {
+  saveBrowser(uid, userAgent) {
     return new Promise((resolve, reject) => {
-      get(child(this.dbref, `${mobile.deviceInfo.model}`))
-        .then((snapshot) => {
-          if (snapshot.exists()) {
-            resolve(snapshot.val());
-          } else {
-            resolve(null);
-          }
+      const obj = {};
+      obj[`${uid}`] = userAgent;
+      set(this.dbrefBrowsers, obj)
+        .then(() => {
+          resolve(obj);
         })
         .catch((error) => {
-          reject(error);
+          reject(null, error);
         });
     });
   }
@@ -387,10 +422,49 @@ export default databaseService;
 
 ```
 
-We call *saveMobile* to store the metadata of the device indexed by model.
+We call *saveMobile* to store the metadata of the device indexed by model. Browse to your firebase account and have a look at the realtime database, you ought to see some data:
+
+![Image: Firebase DB](dbFirebase.PNG "Firebase DB")
+
+But, just leaving the database with defaults is risky business - as all who can call that database can access everyone's data. This is because currently the database rules are set as follows:
+```json
+{
+  "rules": {
+    ".read": true,
+    ".write": true
+  }
+}
+```
+
+Let's set it that only loggedin users can accecss their own data. Firebase comes with an environment variable called *$uid *which we can use in setting the access to a users data in the database with the following configuration:
+
+```json
+{
+  "rules": {
+    ".write": "auth != null",
+    "users": {
+      "$uid": {
+        ".write": "$uid === auth.uid",
+      }
+    }
+  }
+}
+```
+*"auth != null"* tells our database that only logged in users can do actions to the database, while *"$uid === auth.uid"* hints that a user can only affect a path under their user id number.
+In the same tab where you set these access rules, you have a sandbox to test these access rights:
+
+![Image: Firebase DB with access](dbFirebase.PNG "Firebase DB with access")
+
+With all this, if we run our capacitor again and login from the mobile device, our database should be populated as follows:
+![Image: Firebase DB with All](dbWithMobile.PNG "Firebase DB with All")
 
 # Conclusion
 
+In this article, we discovered the portable magic of using capacitor with your App to provide an app on both browser and mobile device.
+We understood how to detect what is running the browser and how to access its data.
+Finally we got acquinted with firebase, the best platfrom for all device and web apps out there. No more complexities or nuances for every device, with today's technology, making a mobile and web app is no brainer.
+
+Enjoy your rise on those app stores!
 
 ## References
 
@@ -398,12 +472,15 @@ We call *saveMobile* to store the metadata of the device indexed by model.
 - https://capacitorjs.com/
 - https://capacitorjs.com/docs/android/troubleshooting
 - https://github.com/capacitor-community/vue-cli-plugin-capacitor
+- https://developer.android.com/studio/run 
+- https://developer.android.com/studio/publish/app-signing#debug-mode 
 
 
 ## Github
 
-Article here is also available on [Github](https://github.com/adamd1985/microfrontend-quickstart)
+Article here is also available on [Github](https://github.com/adamd1985/vue_mobiledetection)
 
 #
-
-<div align="right">Made with :heartpulse: by <b>Adam</b></div>
+<div align="right">
+<p xmlns:cc="http://creativecommons.org/ns#" xmlns:dct="http://purl.org/dc/terms/"><a property="dct:title" rel="cc:attributionURL" href="#">This Article</a> by <a rel="cc:attributionURL dct:creator" property="cc:attributionName" href="https://www.linkedin.com/in/adam-darmanin/">Adam Darmanin</a> is licensed under <a href="http://creativecommons.org/licenses/by-nc-sa/4.0/?ref=chooser-v1" target="_blank" rel="license noopener noreferrer" style="display:inline-block;">CC BY-NC-SA 4.0<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/cc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/by.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/nc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/sa.svg?ref=chooser-v1"></a></p>
+</div>
