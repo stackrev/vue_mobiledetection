@@ -3,14 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "serve": "vue-cli-service serve",
+    "serve": "vue-cli-service --open --https serve",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint",
-    "capacitor:build": "vue-cli-service capacitor:build",
-    "capacitor:serve": "vue-cli-service capacitor:serve"
+    "capacitor:build": "vue-cli-service capacitor:build android && npx cap open android"
   },
   "dependencies": {
-    "17": "^0.0.0",
     "@capacitor-firebase/authentication": "^1.0.0",
     "@capacitor/android": "^4.1.0",
     "@capacitor/core": "^4.1.0",

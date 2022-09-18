@@ -8,6 +8,7 @@
 
 - [Vue and Capacitor - Porting to Mobile Apps made Easy.](#vue-and-capacitor---porting-to-mobile-apps-made-easy)
   - [Build your Web App](#build-your-web-app)
+    - [New UA Challenger Update!](#new-ua-challenger-update)
 - [Add some Capacitors](#add-some-capacitors)
   - [Device Specifics](#device-specifics)
     - [SDKs and Licences](#sdks-and-licences)
@@ -25,6 +26,7 @@
 <!-- /code_chunk_output -->
 - [Vue and Capacitor - Porting to Mobile Apps made Easy.](#vue-and-capacitor---porting-to-mobile-apps-made-easy)
   - [Build your Web App](#build-your-web-app)
+    - [New UA Challenger Update!](#new-ua-challenger-update)
 - [Add some Capacitors](#add-some-capacitors)
   - [Device Specifics](#device-specifics)
     - [SDKs and Licences](#sdks-and-licences)
@@ -110,6 +112,22 @@ Engine: { "name": "Blink", "version": "104.0.0.0" }
 OS: { "name": "Windows", "version": "10" }
 CPU: { "architecture": "amd64" }
 ```
+
+### New UA Challenger Update!
+
+At the time of writing, the above is still possible on Chromium browsers, but google is planning to reduce this information due to user's being fingerprinted. Check the announcement [here](https://blog.chromium.org/2021/05/update-on-user-agent-string-reduction.html). In our case, we can be forward-compatible through accessing the **navigator.userAgentData** object:
+
+```jsx
+if (navigator?.userAgentData) {
+  this.userAgent = JSON.stringify(navigator.userAgentData);
+  this.vendor = navigator.userAgentData.brands[0];
+  this.isMobile = navigator.userAgentData.mobile;
+}
+else {
+  // Do the legacy UA detection.
+  ...
+}
+```        
 
 # Add some Capacitors
 

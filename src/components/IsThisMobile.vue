@@ -8,7 +8,6 @@
     <p>Browser metadata: 
       <ul>
         <li>vendor: {{vendor}}</li>
-        <li>opera: {{opera}}</li>
         <div v-if="uaParsed !== null">
           <li>Browser: {{uaParsed.getBrowser()}}</li>
           <li>Device: {{uaParsed.getDevice()}}</li>
@@ -18,9 +17,9 @@
         </div>
       </ul>
     </p>
-    <div v-if="!isMobile">desktop</div>
+    <div v-if="!isMobile">Running on a desktop</div>
     <div v-else>
-      <p>mobile data:
+      <p>Running on a mobile device with data:
         <ul>
           <li>DeviceInfo: {{deviceInfo}}</li>
           <li>BatteryInfo: {{batteryInfo}}</li>
@@ -47,30 +46,20 @@ export default {
     return {
       userAgent: "",
       vendor: "",
-      opera: "",
       uaParsed: null,
       deviceInfo: "",
       batteryInfo: "",
       userToken: null,
+      isMobile: false,
     };
-  },
-
-  computed: {
-    isMobile(){
-      // { model: '', type: '', vendor: '' }
-      let device = this.uaParsed?.getDevice();
-      // possible devices: console, mobile, tablet, smarttv, wearable, embedded
-      return device != null ? (device?.type === "mobile") : (window.innerWidth < 600);
-    }
   },
   
   mounted() {
     if (this.userToken === null) {
-      firebaseAuth.signInWithGoogle().then(result => console.log(`Result: ${result}`));
-      //if (result) {
-        
-        //this.userToken = firebaseAuth.getIdToken();
-      //}
+      firebaseAuth.signInWithGoogle().then((result) => {
+        console.log(`Result: ${result}`);
+        firebaseAuth.getCurrentUser().then(token => this.userToken = token);
+      });
     }
 
     this.loadBrowserHostData();
@@ -88,18 +77,29 @@ export default {
       // 2. The more sophisticated way is through the user agent (UA) string
       // This string is in the form: User-Agent = product *( RWS ( product / comment ) )
       // 3. https://www.npmjs.com/package/ua-parser-js will structure this info.
-      this.userAgent= navigator?.userAgent || "NA";
-      this.vendor= navigator?.vendor || "NA";
-      this.opera = navigator?.opera || "NA";
-      if (navigator?.userAgent != null) {
-        this.uaParsed = new UAParser(navigator.userAgent);
-        if (this.isMobile) {
-          this.loadDeviceData()
+      // 4. Be forward-compatible, userAgentData is preferred over the UA string.
+      if (navigator?.userAgentData) {
+        this.userAgent = JSON.stringify(navigator.userAgentData);
+        this.vendor = navigator.userAgentData.brands[0];
+        this.isMobile = navigator.userAgentData.mobile;
+      }
+      else {
+        this.userAgent = navigator?.userAgent ?? "NA";
+        this.vendor = navigator?.vendor ?? "NA";
+        if (this.userAgent) {
+          this.uaParsed = new UAParser(navigator.userAgent);
+          // { model: '', type: '', vendor: '' }
+          let device = this.uaParsed?.getDevice();
+          // possible devices: console, mobile, tablet, smarttv, wearable, embedded
+          this.isMobile = device != null ? (device?.type === "mobile") : (window.innerWidth < 600);
+          if (this.isMobile) {
+            this.loadDeviceData()
+          }
         }
       }
 
-      const analytics = getAnalytics();
-      logEvent(analytics, 'initial_load', this.userAgent);
+      // const analytics = getAnalytics();
+      // logEvent(analytics, 'initial_load', this.userAgent);
     },
 
     /**

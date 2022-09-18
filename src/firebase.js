@@ -1,5 +1,5 @@
 import { initializeApp, getApp, getApps } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
+// import { getAnalytics } from "firebase/analytics";
 
 class Firebase {
   constructor(configOptions) {
@@ -24,7 +24,7 @@ class Firebase {
     } else {
       this.app = getApp();
     }
-    this.analytics = getAnalytics(this.app);
+    // this.analytics = getAnalytics(this.app);
   }
 }
 
